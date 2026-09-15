@@ -30,7 +30,8 @@
 ## 界面、图片与课程内容
 
 - **原始方案**：项目以提供的 `MetaLecturer-Interactive-Demo 3(2).html` 和产品设定图片作为界面与交互参考。原 HTML 保留在本地项目根目录，不随运行源码发布，也不作为当前应用的运行入口。
-- **图片**：`public/assets/` 内图片提取自原 HTML。本次未另行核实这些图片的原始来源与使用权限，文件被保留用于对应的面试 Demo。
+- **原型图片**：`public/assets/original-*` 图片提取自原 HTML。本次未另行核实这些图片的原始来源与使用权限，文件被保留用于对应的面试 Demo。
+- **参考风格重建**：`reference-hero.png` 与 `reference-instructor.png` 使用 imagegen 生成；头像为虚构人物。`components/reference-art.tsx` 中的立体图标和玻璃装饰为本项目 SVG 实现。`course-premiere.svg` 与 `course-resolve.svg` 为示例课程封面绘制，相关产品名称和标识属于各自权利人，不表示官方合作。
 - **课程内容**：`lib/knowledge.ts` 内讲义和知识片段为本 Demo 自编示例教学内容。导出讲义包含延伸阅读链接，内容并非外部文章的全文复制。
 - **讲解音频**：`public/media/lesson-1.mp3` 至 `lesson-5.mp3` 使用 macOS Tingting 系统语音，根据示例讲解文本预生成。音频不是教师真人录音，也不表示具有实时数字人合成能力。
 - **人物与数据**：平台中的教授设定、课程目录与班级统计用于演示；个人学习记录来自当前浏览器的实际操作。

@@ -3,47 +3,34 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
-  ArrowDownToLine,
   ArrowRight,
-  Bell,
+  ShoppingCart,
+  UserRound,
+  Trash2,
   BookOpen,
   Bookmark,
-  Box,
-  Camera,
   Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   CircleHelp,
   Clapperboard,
   Clock3,
-  Film,
-  FolderOpen,
   GraduationCap,
-  Headphones,
-  LayoutGrid,
   Lightbulb,
-  MessageCircle,
-  Mic2,
   Play,
-  Plus,
   Search,
   Settings2,
-  Sparkles,
   Star,
-  TrendingUp,
-  WandSparkles,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { courses, type Course } from "@/lib/courses";
-import { useLearningEvents } from "@/lib/learning";
 import { Classroom } from "@/components/classroom";
 import { Knowledge } from "@/components/knowledge";
 import { Analytics } from "@/components/analytics";
 import { LearningPath } from "@/components/learning-path";
 import { Studio } from "@/components/studio";
+import { Home } from "@/components/home";
+import { NewsPage, CommunityPage } from "@/components/discovery";
 
 type View =
   | "home"
@@ -52,7 +39,9 @@ type View =
   | "knowledge"
   | "analytics"
   | "classroom"
-  | "studio";
+  | "studio"
+  | "news"
+  | "community";
 const views: View[] = [
   "home",
   "courses",
@@ -61,24 +50,17 @@ const views: View[] = [
   "analytics",
   "classroom",
   "studio",
+  "news",
+  "community",
 ];
-const categoryItems = [
-  { label: "剪辑包装", icon: Film },
-  { label: "摄影摄像", icon: Camera },
-  { label: "导演编剧", icon: Clapperboard },
-  { label: "影视后期", icon: WandSparkles },
-  { label: "三维动画", icon: Box },
-  { label: "声音设计", icon: Headphones },
-  { label: "AIGC", icon: Sparkles },
-  { label: "全部分类", icon: LayoutGrid },
-];
+
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <span className={`brand ${compact ? "brand-compact" : ""}`}>
       <Image src="/icon.svg" width={35} height={35} alt="" />
       <span>
-        MetaLecturer<span className="brand-dot">.</span>
+        MetaLecturer
       </span>
     </span>
   );
@@ -86,20 +68,19 @@ export function Brand({ compact = false }: { compact?: boolean }) {
 
 export function Platform() {
   const [view, setView] = useState<View>("home");
-  const [activeSlide, setActiveSlide] = useState(0);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [filter, setFilter] = useState("全部分类");
   const [query, setQuery] = useState("");
   const [saved, setSaved] = useState<string[]>([]);
   const [savedOnly, setSavedOnly] = useState(false);
   const [about, setAbout] = useState(false);
-  const [notifications, setNotifications] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [cart, setCart] = useState<string[]>([]);
+  const [newsId, setNewsId] = useState<string | undefined>();
   const [searchOpen, setSearchOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
   const [notice, setNotice] = useState("");
-  const [recommendedOffset, setRecommendedOffset] = useState(0);
   const [sort, setSort] = useState("recommended");
-  const events = useLearningEvents();
 
   useEffect(() => {
     const read = () => {
@@ -107,10 +88,14 @@ export function Platform() {
       setView(views.includes(hash) ? hash : "home");
       setSelectedCourse(null);
       setSearchOpen(false);
-      setNotifications(false);
+      setCartOpen(false);
       setAbout(false);
     };
     read();
+    try {
+      const stored: unknown = JSON.parse(localStorage.getItem("metalecturer.cart") || "[]");
+      if (Array.isArray(stored)) setCart([...new Set(stored.filter((id): id is string => typeof id === "string" && courses.some(course => course.id === id && course.price !== undefined)))]);
+    } catch { /* 默认空购物车。 */ }
     window.addEventListener("hashchange", read);
     try {
       const ids: unknown = JSON.parse(
@@ -136,7 +121,7 @@ export function Platform() {
     return () => clearTimeout(timer);
   }, [notice]);
   useEffect(() => {
-    document.title = `${view === "home" ? "让每一次学习，都有回应" : { courses: "探索课程", path: "学习路径", knowledge: "课程知识库", analytics: "学习数据", classroom: "数字教授课堂", studio: "创作中心" }[view]} · MetaLecturer`;
+    document.title = `${view === "home" ? "让每一次学习，都有回应" : { courses: "探索课程", path: "学习路径", knowledge: "课程知识库", analytics: "学习数据", classroom: "数字教授课堂", studio: "创作中心", news: "行业资讯", community: "创作社区" }[view]} · MetaLecturer`;
   }, [view]);
 
   function navigate(next: View) {
@@ -181,19 +166,20 @@ export function Platform() {
     sort === "short"
       ? [...filtered].sort((a, b) => a.lessons - b.lessons)
       : filtered;
-  const watchedSeconds = events
-    .filter((e) => e.type === "lesson")
-    .reduce((sum, e) => sum + (e.value || 0), 0);
-  const completedChapters = new Set(
-    events
-      .filter(
-        (e) =>
-          e.type === "lesson" &&
-          e.courseId === "director" &&
-          e.label.startsWith("完成 · "),
-      )
-      .map((e) => e.label),
-  ).size;
+  function updateCart(next: string[]) {
+    setCart(next);
+    try { localStorage.setItem("metalecturer.cart", JSON.stringify(next)); }
+    catch { setNotice("本次选课已保留，浏览器暂时无法持久保存"); }
+  }
+  function addToCart(course: Course) {
+    if (!cart.includes(course.id)) updateCart([...cart, course.id]);
+    setNotice("已加入购物车");
+  }
+  function openNews(id?: string) {
+    setNewsId(id);
+    navigate("news");
+  }
+  const cartCourses = cart.map(id => courses.find(course => course.id === id)).filter((course): course is Course => Boolean(course));
 
   if (view === "classroom")
     return (
@@ -206,426 +192,30 @@ export function Platform() {
 
   return (
     <div className="platform">
-      <header className="site-header">
-        <div className="header-inner">
-          <button
-            className="brand-button"
-            onClick={() => navigate("home")}
-            aria-label="MetaLecturer 首页"
-          >
-            <Brand />
-          </button>
-          <nav className="main-navigation" aria-label="主导航">
-            {(
-              [
-                { id: "home", label: "首页" },
-                { id: "courses", label: "课程" },
-                { id: "path", label: "学习路径" },
-                { id: "studio", label: "创作中心" },
-                { id: "knowledge", label: "资源库" },
-              ] as { id: View; label: string }[]
-            ).map((n) => (
-              <button
-                key={n.id}
-                className={view === n.id ? "active" : ""}
-                onClick={() =>
-                  n.id === "courses" ? showCourses() : navigate(n.id)
-                }
-              >
-                {n.label}
-                {view === n.id && <i />}
-              </button>
+      <header className="portal-header">
+        <div className="portal-header-inner">
+          <button className="portal-brand" onClick={() => navigate("home")} aria-label="MetaLecturer 首页"><Brand /></button>
+          <nav className="portal-nav" aria-label="主导航">
+            {([
+              { id: "home", label: "首页" }, { id: "courses", label: "课程" },
+              { id: "path", label: "学习路径" }, { id: "news", label: "行业资讯" },
+              { id: "community", label: "创作社区" }, { id: "knowledge", label: "资源库" },
+            ] as { id: View; label: string }[]).map(item => (
+              <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => item.id === "courses" ? showCourses() : item.id === "news" ? openNews() : navigate(item.id)}>{item.label}</button>
             ))}
+            <button className={`portal-studio-mobile ${view === "studio" ? "active" : ""}`} onClick={() => navigate("studio")}>创作中心</button>
           </nav>
-          <div className="header-actions">
-            <button
-              className="search-trigger"
-              aria-label="搜索课程"
-              onClick={() => setSearchOpen(true)}
-            >
-              <Search size={16} />
-              <span>搜索课程、老师、技能</span>
-              <kbd>⌕</kbd>
-            </button>
-            <button
-              className="icon-button notification-button"
-              onClick={() => setNotifications(true)}
-              aria-label="学习通知"
-            >
-              <Bell size={19} />
-              <i />
-            </button>
-            <button
-              className="profile-button"
-              onClick={() => navigate("analytics")}
-              aria-label="Alex 的学习数据"
-            >
-              <span className="profile-avatar">A</span>
-              <span>Alex</span>
-              <ChevronDown size={13} />
-            </button>
+          <div className="portal-tools">
+            <button className="portal-search" aria-label="搜索课程" onClick={() => setSearchOpen(true)}><span>搜索课程、老师、技能</span><Search size={16} /></button>
+            <button className="portal-studio" onClick={() => navigate("studio")}><Clapperboard size={15} />创作中心</button>
+            <button className="portal-cart" aria-label="购物车" onClick={() => setCartOpen(true)}><ShoppingCart size={22} />{cart.length > 0 && <span>{cart.length}</span>}</button>
+            <button className="portal-profile" aria-label="Alex 的学习数据" onClick={() => navigate("analytics")}><span><UserRound size={21} /></span><span>Alex</span></button>
           </div>
         </div>
       </header>
 
       <main className={`site-main ${view === "home" ? "home-main" : ""}`}>
-        {view === "home" && (
-          <>
-            <section className="home-hero" aria-label="精选课程">
-              <div className="hero-intro">
-                <div className="eyebrow-chip">
-                  <span />
-                  为创作者而生的 AI 课堂
-                </div>
-                <h1>
-                  未来<span> · </span>影像<span> · </span>无限
-                </h1>
-                <p>
-                  让每一次学习，都有回应。
-                  <br />
-                  与数字教授一起，把想象变成作品。
-                </p>
-                <Button
-                  onClick={() => showCourses()}
-                  className="explore-button"
-                >
-                  探索课程
-                  <ArrowRight size={17} />
-                </Button>
-                <div className="hero-statistics">
-                  <div>
-                    <strong>
-                      4<span> 门</span>
-                    </strong>
-                    <small>精选示例课程</small>
-                  </div>
-                  <i />
-                  <div>
-                    <strong>
-                      5<span> 个</span>
-                    </strong>
-                    <small>课堂互动章节</small>
-                  </div>
-                  <i />
-                  <div>
-                    <strong>随时</strong>
-                    <small>提问 · 探索 · 创作</small>
-                  </div>
-                </div>
-              </div>
-              <div className="course-carousel">
-                <div className="carousel-ambient" />
-                <div className="carousel-cards">
-                  {courses.map((c, index) => {
-                    const diff =
-                      (index - activeSlide + courses.length) % courses.length;
-                    const position =
-                      diff === 0
-                        ? "current"
-                        : diff === 1
-                          ? "next"
-                          : diff === courses.length - 1
-                            ? "previous"
-                            : "hidden-card";
-                    return (
-                      <article
-                        className={`hero-course ${position}`}
-                        key={c.id}
-                        aria-hidden={diff !== 0}
-                      >
-                        <Image
-                          src={c.image}
-                          alt={`${c.title}课程封面`}
-                          fill
-                          sizes="(max-width: 700px) 90vw, 650px"
-                          priority={index === 0}
-                        />
-                        <div className="hero-course-shade" />
-                        <span className="hero-course-badge">
-                          {index === 0 ? (
-                            <>
-                              <span />
-                              精选推荐
-                            </>
-                          ) : (
-                            c.tag
-                          )}
-                        </span>
-                        <div className="hero-course-content">
-                          <div className="hero-course-kicker">
-                            {index === 0
-                              ? "THE ART OF VISUAL STORYTELLING"
-                              : index === 1
-                                ? "CREATE IN ANOTHER DIMENSION"
-                                : index === 2
-                                  ? "IMAGINATION MEETS INTELLIGENCE"
-                                  : "LIGHT MAKES THE STORY"}
-                          </div>
-                          <h2>{c.title}</h2>
-                          <p>{c.subtitle}</p>
-                          <div className="hero-course-bottom">
-                            <div className="instructor">
-                              <Image
-                                src="/assets/original-05.png"
-                                width={29}
-                                height={29}
-                                alt="数字教授形象"
-                              />
-                              <span>
-                                <b>
-                                  {c.instructor}
-                                  <small>数字教授</small>
-                                </b>
-                                <small>
-                                  {c.category} · {c.lessons} 节课程
-                                </small>
-                              </span>
-                            </div>
-                            <button
-                              className="hero-play"
-                              tabIndex={diff === 0 ? 0 : -1}
-                              onClick={() =>
-                                c.id === "director"
-                                  ? openClassroom()
-                                  : setSelectedCourse(c)
-                              }
-                            >
-                              <Play size={13} fill="currentColor" />
-                              {c.id === "director" ? "进入课堂" : "课程详情"}
-                            </button>
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-                <button
-                  className="carousel-arrow carousel-prev"
-                  aria-label="上一门课程"
-                  onClick={() => setActiveSlide((activeSlide + 3) % 4)}
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <button
-                  className="carousel-arrow carousel-next"
-                  aria-label="下一门课程"
-                  onClick={() => setActiveSlide((activeSlide + 1) % 4)}
-                >
-                  <ChevronRight size={20} />
-                </button>
-                <div className="carousel-pagination">
-                  {courses.map((c, i) => (
-                    <button
-                      key={c.id}
-                      aria-label={`展示${c.title}`}
-                      aria-pressed={activeSlide === i}
-                      className={activeSlide === i ? "active" : ""}
-                      onClick={() => setActiveSlide(i)}
-                    />
-                  ))}
-                  <span>
-                    0{activeSlide + 1}
-                    <i> / 04</i>
-                  </span>
-                </div>
-              </div>
-            </section>
-
-            <section className="category-and-path" aria-label="课程分类">
-              <div className="category-list">
-                {categoryItems.map(({ label, icon: Icon }, i) => (
-                  <button key={label} onClick={() => showCourses(label)}>
-                    <span className={`category-icon category-icon-${i}`}>
-                      <Icon size={24} strokeWidth={1.6} />
-                    </span>
-                    <span>{label}</span>
-                  </button>
-                ))}
-              </div>
-              <button className="path-teaser" onClick={() => navigate("path")}>
-                <div>
-                  <span className="tiny-label">YOUR NEXT STEP</span>
-                  <h3>
-                    找到你的学习路径
-                    <ArrowRight size={16} />
-                  </h3>
-                  <p>每一步，都更靠近创作目标</p>
-                </div>
-                <div className="path-graphic">
-                  <span />
-                  <span />
-                  <span />
-                  <ArrowRight size={29} />
-                </div>
-              </button>
-            </section>
-
-            <section className="continue-strip">
-              <div className="continue-icon">
-                <Play size={17} fill="currentColor" />
-              </div>
-              <div className="continue-description">
-                <span>
-                  {watchedSeconds > 0
-                    ? "继续你的学习旅程"
-                    : "你的第一堂 AI 互动课"}
-                </span>
-                <h3>
-                  镜头轴线与空间连续性
-                  <span>与林知远教授一起，亲手移动机位</span>
-                </h3>
-              </div>
-              <div className="continue-progress">
-                <span>
-                  {watchedSeconds > 0
-                    ? `已学习 ${watchedSeconds < 60 ? `${Math.round(watchedSeconds)} 秒` : `${Math.floor(watchedSeconds / 60)} 分钟`}`
-                    : "5 个章节 · 交互微课"}
-                </span>
-                <div>
-                  <i
-                    style={{
-                      width: `${Math.min(100, (completedChapters / 5) * 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <Button variant="secondary" size="sm" onClick={openClassroom}>
-                {watchedSeconds > 0 ? "继续学习" : "开始体验"}
-                <ArrowRight size={15} />
-              </Button>
-            </section>
-
-            <section className="recommendations-section">
-              <div className="section-title">
-                <div>
-                  <span className="section-eyebrow">CURATED FOR YOU</span>
-                  <h2>
-                    下一次灵感，从这里开始<span>为你推荐</span>
-                  </h2>
-                </div>
-                <button
-                  className="text-button"
-                  onClick={() =>
-                    setRecommendedOffset((recommendedOffset + 1) % 4)
-                  }
-                >
-                  换一批
-                  <TrendingUp size={15} />
-                </button>
-              </div>
-              <div className="course-grid">
-                {[
-                  ...courses.slice(recommendedOffset),
-                  ...courses.slice(0, recommendedOffset),
-                ].map((c) => (
-                  <CourseCard
-                    key={c.id}
-                    course={c}
-                    saved={saved.includes(c.id)}
-                    onOpen={() => setSelectedCourse(c)}
-                    onSave={() => toggleSaved(c)}
-                  />
-                ))}
-              </div>
-            </section>
-
-            <section className="platform-promise">
-              <div className="promise-intro">
-                <span className="section-eyebrow">LEARNING, REIMAGINED</span>
-                <h2>一堂课，更多可能。</h2>
-                <p>从听懂，到真正会用。</p>
-              </div>
-              <div className="promise-features">
-                {[
-                  {
-                    icon: Mic2,
-                    title: "数字人授课",
-                    text: "知识有声音，课堂有陪伴",
-                    target: "classroom",
-                  },
-                  {
-                    icon: FolderOpen,
-                    title: "课程知识库",
-                    text: "每个知识点，都有迹可循",
-                    target: "knowledge",
-                  },
-                  {
-                    icon: MessageCircle,
-                    title: "随时问答",
-                    text: "让好奇心，及时得到回应",
-                    target: "classroom",
-                  },
-                  {
-                    icon: TrendingUp,
-                    title: "学习数据",
-                    text: "看见每一次理解与进步",
-                    target: "analytics",
-                  },
-                ].map(({ icon: Icon, title, text, target }) => (
-                  <button key={title} onClick={() => navigate(target as View)}>
-                    <span>
-                      <Icon size={23} strokeWidth={1.6} />
-                    </span>
-                    <h3>
-                      {title}
-                      <ArrowRight size={14} />
-                    </h3>
-                    <p>{text}</p>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section className="editorial-section">
-              <div className="section-title">
-                <div>
-                  <span className="section-eyebrow">
-                    THE CREATOR'S NOTEBOOK
-                  </span>
-                  <h2>把学到的，变成自己的。</h2>
-                </div>
-              </div>
-              <div className="editorial-grid">
-                <button
-                  className="editorial-card dark"
-                  onClick={() => navigate("studio")}
-                >
-                  <span className="editorial-number">01 / PRACTICE</span>
-                  <div>
-                    <Clapperboard size={27} />
-                    <h3>
-                      你的下一个故事
-                      <br />
-                      从一个镜头开始
-                    </h3>
-                    <p>
-                      打开分镜工作台，把灵感写进拍摄计划。
-                      <ArrowRight size={17} />
-                    </p>
-                  </div>
-                  <div className="editorial-decoration">
-                    REC <i />
-                  </div>
-                </button>
-                <button
-                  className="editorial-card light"
-                  onClick={() => navigate("knowledge")}
-                >
-                  <span className="editorial-number">02 / EXPLORE</span>
-                  <div>
-                    <BookOpen size={27} />
-                    <h3>好问题，值得追根究底。</h3>
-                    <p>
-                      走进课程知识库，重新认识镜头背后的逻辑。
-                      <ArrowRight size={17} />
-                    </p>
-                  </div>
-                  <span className="editorial-lines" />
-                </button>
-              </div>
-            </section>
-          </>
-        )}
+        {view === "home" && <Home onExplore={showCourses} onCourse={setSelectedCourse} onClassroom={openClassroom} onPath={() => navigate("path")} onNews={openNews} />}
 
         {view === "courses" && (
           <section className="catalog-page">
@@ -649,6 +239,8 @@ export function Platform() {
               <div className="filter-pills">
                 {[
                   "全部分类",
+                  "剪辑包装",
+                  "影视后期",
                   "导演编剧",
                   "摄影摄像",
                   "三维动画",
@@ -742,6 +334,8 @@ export function Platform() {
           </section>
         )}
 
+        {view === "news" && <NewsPage initialId={newsId} onClassroom={openClassroom} onStudio={() => navigate("studio")} />}
+        {view === "community" && <CommunityPage onClassroom={openClassroom} onStudio={() => navigate("studio")} />}
         {view === "knowledge" && <Knowledge onClassroom={openClassroom} />}
         {view === "analytics" && <Analytics onClassroom={openClassroom} />}
         {view === "path" && <LearningPath onClassroom={openClassroom} />}
@@ -781,6 +375,7 @@ export function Platform() {
                 />
                 <span>{selectedCourse.tag}</span>
               </div>
+              {selectedCourse.price !== undefined && <div className="detail-price"><span>¥{selectedCourse.price}</span><del>¥{selectedCourse.originalPrice}</del><small>演示价格</small></div>}
               <div className="detail-meta">
                 <span>
                   <GraduationCap size={16} />
@@ -834,6 +429,7 @@ export function Platform() {
                 </p>
               )}
               <div className="dialog-actions">
+                {selectedCourse.price !== undefined && <Button variant="secondary" onClick={() => addToCart(selectedCourse)}><ShoppingCart size={16} />{cart.includes(selectedCourse.id) ? "已加入购物车" : "加入购物车"}</Button>}
                 <Button
                   variant="outline"
                   onClick={() => toggleSaved(selectedCourse)}
@@ -915,29 +511,17 @@ export function Platform() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={notifications} onOpenChange={setNotifications}>
-        <DialogContent title="学习通知" description="你的学习旅程，从这里继续">
-          <div className="notification-item">
-            <span>
-              <Sparkles size={21} />
-            </span>
-            <div>
-              <h3>欢迎来到 MetaLecturer</h3>
-              <p>
-                你的第一堂互动课已准备好。移动机位、随时提问，用一次小实验理解镜头轴线。
-              </p>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setNotifications(false);
-                  openClassroom();
-                }}
-              >
-                进入课堂
-                <ArrowRight size={14} />
-              </Button>
-            </div>
-          </div>
+      <Dialog open={cartOpen} onOpenChange={setCartOpen}>
+        <DialogContent title="我的购物车" description="演示选课清单 · 价格为示例，不产生订单或扣款">
+          {cartCourses.length ? <>
+            <div className="cart-list">{cartCourses.map(course => <div className="cart-item" key={course.id}>
+              <Image src={course.image} alt="" width={48} height={64} />
+              <div><strong>{course.title}</strong><span>¥{course.price} · {course.lessons} 课时</span></div>
+              <button className="icon-button" aria-label={`移除${course.title}`} onClick={() => updateCart(cart.filter(id => id !== course.id))}><Trash2 size={17} /></button>
+            </div>)}</div>
+            <div className="cart-summary"><span>示例合计</span><strong>¥{cartCourses.reduce((sum, course) => sum + (course.price || 0), 0)}</strong></div>
+            <div className="dialog-actions"><Button variant="outline" onClick={() => { setCartOpen(false); showCourses(); }}>继续选课</Button><Button onClick={() => { setCartOpen(false); openClassroom(); }}><Play size={15} />体验示例课堂</Button></div>
+          </> : <div className="cart-empty"><ShoppingCart size={36} /><p>还没有加入课程。<br />浏览课程详情，把感兴趣的内容加入选课清单。</p><div className="dialog-actions"><Button onClick={() => { setCartOpen(false); showCourses(); }}>去探索课程<ArrowRight size={15} /></Button></div></div>}
         </DialogContent>
       </Dialog>
 

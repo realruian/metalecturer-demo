@@ -4,7 +4,7 @@
 
 交付目标：**界面完整、主要流程可操作、支持线上访问，并提供可阅读和运行的项目源码。**
 
-**[在线体验](https://metalecturer-demo.vercel.app)** · 无需登录，点击首页「进入课堂」开始。
+**[在线体验](https://metalecturer-demo.vercel.app)** · 无需登录，点击首页导演课程卡片的「试看」开始。
 
 ## 界面预览
 
@@ -23,7 +23,7 @@
 | 随时问答     | 提交课程问题，检索相关知识片段并展示出处；点击引用回到对应章节                      |
 | 学习数据回流 | 汇总实际听课时长、提问、实验、练习与笔记；切换时间范围，导出 CSV / JSON 记录        |
 
-此外包含课程筛选与收藏、基于实际行为的四步学习路径，以及可编辑、排序、保存和导出的分镜工作台。
+此外包含课程筛选与收藏、购物车选课演示、行业资讯阅读、创作社区示例、基于实际行为的四步学习路径，以及可编辑、排序、保存和导出的分镜工作台。购物车仅保存选课清单，不创建订单或发起支付；首页平台规模、课程价格和资讯为示例。
 
 ## 三分钟演示
 
@@ -79,7 +79,10 @@ app/
   globals.css               全局样式与平台界面
   api/chat/route.ts         课程资料检索接口
 components/
-  platform.tsx              首页、课程目录与页面导航
+  platform.tsx              课程目录、选课购物车与页面导航
+  home.tsx                  对齐参考图的课程首页
+  reference-art.tsx         立体分类图标与玻璃装饰
+  discovery.tsx             示例资讯与创作社区
   classroom.tsx             互动课堂、播放、问答、笔记与练习
   knowledge.tsx             课程知识库
   analytics.tsx             学习数据与导出
@@ -91,7 +94,7 @@ lib/
   knowledge.ts              讲义、检索与输入验证
   learning.ts               浏览器学习记录
 public/
-  assets/                   从原 HTML 提取的图片
+  assets/                   原型图片、生成封面与 SVG 课程封面
   media/                    预生成中文讲解音频
 tests/
   knowledge.test.ts         检索及数据边界测试
@@ -115,4 +118,4 @@ tests/
 
 ## 素材与依赖来源
 
-界面延续已有 HTML 与提供的产品图片；图片从原 HTML 提取，原始来源与使用权限未另行核实。依赖许可、音频和内容来源见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+界面延续已有 HTML 与提供的产品图片；原型图片从原 HTML 提取，原始来源与使用权限未另行核实；补充的电影封面和虚构讲师头像由 imagegen 生成，分类图标与装饰使用 SVG 绘制。依赖许可、音频和内容来源见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
