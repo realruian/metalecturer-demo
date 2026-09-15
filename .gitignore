@@ -1,0 +1,16 @@
+node_modules/
+.next/
+.vercel/
+.env*
+!.env.example
+*.tsbuildinfo
+.DS_Store
+test-results/
+playwright-report/
+
+.playwright-cli/
+.playwright/
+
+# 原始参考文件保留在本地，仓库交付运行源码。
+MetaLecturer-Interactive-Demo 3(2).html
+.vercel
